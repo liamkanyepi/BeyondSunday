@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Beyond Sunday</title>
+<style>
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: radial-gradient(circle at top, #1a1a1a, #000);
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .container {
+    background: rgba(20,20,20,0.85);
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    text-align: center;
+    max-width: 360px;
+    width: 100%;
+  }
+  h1 {
+    margin-top: 0;
+    font-size: 2rem; /* Larger title */
+    font-weight: 800;
+    margin-bottom: 1.2rem;
+  }
+  input[type="file"] {
+    display: none;
+  }
+  button {
+    background: linear-gradient(135deg, #ff5f6d, #ffc371);
+    border: none;
+    padding: 14px 22px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 1rem;
+    color: #000;
+  }
+  button:hover {
+    filter: brightness(1.1);
+  }
+  select {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    font-size: 1rem;
+    margin-top: 0.5rem;
+    background: #222;
+    color: #fff;
+  }
+  select:disabled {
+    opacity: 0.5;
+  }
+  img {
+    max-width: 100%;
+    margin-top: 1rem;
+    border-radius: 8px;
+    display: none;
+  }
+  #emotionDisplay {
+    margin-top: 0.5rem;
+    font-weight: bold;
+  }
+  #statusMessage {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: #aaa;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Beyond Sunday</h1>
+  <input type="file" id="photoInput" accept="image/*" capture="environment" />
+  <button id="uploadBtn">Take a Photo or Upload</button>
+  <select id="emotionSelect" disabled>
+    <option value="">Select an emotion</option>
+    <option value="🙏 Grateful">🙏 Grateful</option>
+    <option value="😊 Joyful">😊 Joyful</option>
+    <option value="😞 Sad">😞 Sad</option>
+    <option value="😔 Reflective">😔 Reflective</option>
+    <option value="😨 Anxious">😨 Anxious</option>
+    <option value="❤️ Loved">❤️ Loved</option>
+    <option value="😤 Frustrated">😤 Frustrated</option>
+    <option value="😟 Confused">😟 Confused</option>
+    <option value="✨ Hopeful">✨ Hopeful</option>
+    <option value="😌 Peaceful">😌 Peaceful</option>
+    <option value="💭 Seeking">💭 Seeking</option>
+    <option value="😢 Mourning">😢 Mourning</option>
+    <option value="💪 Empowered">💪 Empowered</option>
+    <option value="🌿 Forgiving">🌿 Forgiving</option>
+    <option value="😇 Inspired">😇 Inspired</option>
+    <option value="🤯 Overwhelmed">🤯 Overwhelmed</option>
+    <option value="🔥 Passionate">🔥 Passionate</option>
+    <option value="🌅 Renewed">🌅 Renewed</option>
+    <option value="😶 Empty">😶 Empty</option>
+    <option value="🤲 Trusting">🤲 Trusting</option>
+  </select>
+  <img id="photoDisplay" alt="Uploaded Photo" />
+  <div id="emotionDisplay"></div>
+  <div id="statusMessage">Tap the button above to add a photo.</div>
+</div>
+
+<script>
+  const photoInput = document.getElementById('photoInput');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const photoDisplay = document.getElementById('photoDisplay');
+  const emotionSelect = document.getElementById('emotionSelect');
+  const emotionDisplay = document.getElementById('emotionDisplay');
+  const statusMessage = document.getElementById('statusMessage');
+
+  const DISPLAY_DURATION_SECONDS = 30;
+  let countdownTimer;
+
+  uploadBtn.addEventListener('click', () => photoInput.click());
+
+  photoInput.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        photoDisplay.src = e.target.result;
+        photoDisplay.style.display = 'block';
+        emotionSelect.disabled = false;
+        emotionSelect.value = '';
+        emotionDisplay.textContent = '';
+        startTimer();
+        statusMessage.textContent = 'Photo uploaded. Select an emotion.';
+      };
+      reader.readAsDataURL(file);
+    } else {
+      statusMessage.textContent = 'Please select a valid image.';
+    }
+    photoInput.value = '';
+  });
+
+  emotionSelect.addEventListener('change', () => {
+    const val = emotionSelect.value;
+    emotionDisplay.textContent = val ? `Feeling: ${val}` : '';
+  });
+
+  function startTimer() {
+    clearTimeout(countdownTimer);
+    countdownTimer = setTimeout(() => {
+      photoDisplay.style.display = 'none';
+      emotionSelect.disabled = true;
+      emotionSelect.value = '';
+      emotionDisplay.textContent = '';
+      statusMessage.textContent = 'Photo has disappeared.';
+    }, DISPLAY_DURATION_SECONDS * 1000);
+  }
+</script>
+</body>
+</html>
