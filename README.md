@@ -1,7 +1,6 @@
 # 📸 Beyond Sunday App
 
-This is **Flask-based web application**  allowing users to **upload or take a photo** and select an emotion from a dropdown list.  
-The app is mobile-friendly and can be accessed from your phone or other devices on the same network.
+This is **Flask-based web application**  allowing users to **upload or take a photo** and select an emotion from a dropdown list. The app is mobile-friendly and can be accessed from your phone or other devices on the same network.
 
 ---
 
@@ -10,21 +9,6 @@ The app is mobile-friendly and can be accessed from your phone or other devices 
 - Select an **emotion** from a dropdown list.
 - Images are saved server-side.
 ---
-
-## 📂 Project Structure
-
-BEYONDSUNDAY/
-├── app/
-│   ├── static/         # Contains static files like CSS, JS, and images.
-│   ├── uploads/        # Directory for user-uploaded files.
-│   ├── login.html      # The login page template.
-│   ├── upload.html     # The file upload page template.
-│   └── app.py          # The main Flask application file.
-├── app_venv/           # Python virtual environment (ignored by Git).
-├── .gitignore          # Specifies files and folders for Git to ignore.
-├── README.md           # You are here!
-├── requirements.txt    # Lists the Python dependencies for the project.
-└── sample_image.jpg    # A sample image for testing or display.
 
 ## ⚙️ Installation & Setup
 
