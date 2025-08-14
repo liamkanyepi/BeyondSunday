@@ -3,36 +3,28 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Beyond Sunday</title>
+<title>Beyond Sunday Story</title>
 <style>
+  :root { --nav-height: 64px; }
+
   body {
     margin: 0;
     font-family: system-ui, sans-serif;
-    background: radial-gradient(circle at top, #1a1a1a, #000);
+    background: #000;
     color: #fff;
     min-height: 100vh;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+  }
+
+  /* Centered upload button when idle */
+  .upload-container {
+    flex: 1;
+    display: flex;
     justify-content: center;
+    align-items: center;
   }
-  .container {
-    background: rgba(20,20,20,0.85);
-    padding: 24px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-    text-align: center;
-    max-width: 360px;
-    width: 100%;
-  }
-  h1 {
-    margin-top: 0;
-    font-size: 2rem; /* Larger title */
-    font-weight: 800;
-    margin-bottom: 1.2rem;
-  }
-  input[type="file"] {
-    display: none;
-  }
+
   button {
     background: linear-gradient(135deg, #ff5f6d, #ffc371);
     border: none;
@@ -41,122 +33,254 @@
     font-size: 1rem;
     font-weight: bold;
     cursor: pointer;
-    margin-bottom: 1rem;
     color: #000;
   }
-  button:hover {
-    filter: brightness(1.1);
-  }
-  select {
-    width: 100%;
-    padding: 10px;
-    border-radius: 8px;
-    border: none;
-    font-size: 1rem;
-    margin-top: 0.5rem;
-    background: #222;
-    color: #fff;
-  }
-  select:disabled {
-    opacity: 0.5;
-  }
-  img {
-    max-width: 100%;
-    margin-top: 1rem;
-    border-radius: 8px;
+  button:hover { filter: brightness(1.1); }
+
+  input[type="file"] { display: none; }
+
+  /* Story display area */
+  .story-container {
+    position: relative;
+    flex: 1;
     display: none;
+    flex-direction: column;
+    overflow: hidden;
   }
-  #emotionDisplay {
-    margin-top: 0.5rem;
-    font-weight: bold;
+
+  .story-image {
+    flex: 1;
+    object-fit: contain; /* fit inside boundaries */
+    width: 100%;
+    height: calc(100vh - var(--nav-height));
+    background-color: black; /* black borders if needed */
+    padding: 1px 20px; /* 5px for top/bottom, 20px for left/right */
+    box-sizing: border-box; 
   }
-  #statusMessage {
-    margin-top: 0.5rem;
-    font-size: 0.9rem;
-    color: #aaa;
+
+  /* Feeling text overlay */
+  .feeling-text {
+    position: absolute;
+    bottom: calc(var(--nav-height) + 80px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.6);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 1rem;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .feeling-text.show {
+    opacity: 1;
+  }
+
+  /* Progress bar */
+  .progress-bar {
+    position: absolute;
+    top: 0; left: 0;
+    height: 4px;
+    background: rgba(255,255,255,0.4);
+    width: 100%;
+  }
+  .progress-fill {
+    height: 100%;
+    background: white;
+    width: 0%;
+    transition: width linear;
+  }
+
+  /* Emotion chip row */
+  .emotion-row {
+    position: absolute;
+    bottom: calc(var(--nav-height) + 16px);
+    left: 0;
+    right: 0;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 0 12px;
+    scrollbar-width: none;
+  }
+  .emotion-row::-webkit-scrollbar { display: none; }
+
+  .emotion-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(6px);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: background 0.2s ease;
+  }
+  .emotion-chip.selected {
+    background: rgba(255,255,255,0.8);
+    color: #000;
+  }
+
+  /* Bottom nav */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: var(--nav-height);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: rgba(20,20,20,0.95);
+    border-top: 1px solid #333;
+    backdrop-filter: blur(6px);
+  }
+
+  .nav-item {
+    width: 56px; height: 56px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 28px;
+    user-select: none;
+  }
+  .nav-item.active {
+    outline: 2px solid rgba(255,255,255,0.15);
+    outline-offset: 2px;
   }
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>Beyond Sunday</h1>
+
+<!-- Upload Button (only visible before story) -->
+<div class="upload-container" id="uploadContainer">
   <input type="file" id="photoInput" accept="image/*" capture="environment" />
   <button id="uploadBtn">Take a Photo or Upload</button>
-  <select id="emotionSelect" disabled>
-    <option value="">Select an emotion</option>
-    <option value="🙏 Grateful">🙏 Grateful</option>
-    <option value="😊 Joyful">😊 Joyful</option>
-    <option value="😞 Sad">😞 Sad</option>
-    <option value="😔 Reflective">😔 Reflective</option>
-    <option value="😨 Anxious">😨 Anxious</option>
-    <option value="❤️ Loved">❤️ Loved</option>
-    <option value="😤 Frustrated">😤 Frustrated</option>
-    <option value="😟 Confused">😟 Confused</option>
-    <option value="✨ Hopeful">✨ Hopeful</option>
-    <option value="😌 Peaceful">😌 Peaceful</option>
-    <option value="💭 Seeking">💭 Seeking</option>
-    <option value="😢 Mourning">😢 Mourning</option>
-    <option value="💪 Empowered">💪 Empowered</option>
-    <option value="🌿 Forgiving">🌿 Forgiving</option>
-    <option value="😇 Inspired">😇 Inspired</option>
-    <option value="🤯 Overwhelmed">🤯 Overwhelmed</option>
-    <option value="🔥 Passionate">🔥 Passionate</option>
-    <option value="🌅 Renewed">🌅 Renewed</option>
-    <option value="😶 Empty">😶 Empty</option>
-    <option value="🤲 Trusting">🤲 Trusting</option>
-  </select>
-  <img id="photoDisplay" alt="Uploaded Photo" />
-  <div id="emotionDisplay"></div>
-  <div id="statusMessage">Tap the button above to add a photo.</div>
 </div>
 
+<!-- Story display -->
+<div class="story-container" id="storyContainer">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <img id="storyImage" class="story-image" alt="Story" />
+  <div class="emotion-row" id="emotionRow">
+    <!-- Emotions dynamically inserted -->
+  </div>
+</div>
+
+<!-- Bottom navigation -->
+<nav class="bottom-nav">
+  <div class="nav-item" id="homeTab">🏠</div>
+  <div class="nav-item active" id="storyTabBtn">➕</div>
+  <div class="nav-item" id="discoverTab">🌍</div>
+  <div class="nav-item" id="profileTab">👤</div>
+</nav>
+
 <script>
+  const uploadContainer = document.getElementById('uploadContainer');
+  const storyContainer = document.getElementById('storyContainer');
   const photoInput = document.getElementById('photoInput');
   const uploadBtn = document.getElementById('uploadBtn');
-  const photoDisplay = document.getElementById('photoDisplay');
-  const emotionSelect = document.getElementById('emotionSelect');
-  const emotionDisplay = document.getElementById('emotionDisplay');
-  const statusMessage = document.getElementById('statusMessage');
+  const storyImage = document.getElementById('storyImage');
+  const progressFill = document.getElementById('progressFill');
+  const emotionRow = document.getElementById('emotionRow');
 
-  const DISPLAY_DURATION_SECONDS = 30;
-  let countdownTimer;
+  const emotions = [
+    "🙏 Grateful", "😊 Joyful", "😌 Peaceful", "✨ Hopeful",
+    "❤️ Loved", "🔥 Passionate", "🌿 Forgiving", "💪 Empowered",
+    "🤯 Overwhelmed", "😔 Reflective", "💭 Seeking", "😢 Mourning"
+  ];
+
+  // REMOVED the hardcoded STORY_DURATION constant.
 
   uploadBtn.addEventListener('click', () => photoInput.click());
 
-  photoInput.addEventListener('change', (event) => {
-    const file = event.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        photoDisplay.src = e.target.result;
-        photoDisplay.style.display = 'block';
-        emotionSelect.disabled = false;
-        emotionSelect.value = '';
-        emotionDisplay.textContent = '';
-        startTimer();
-        statusMessage.textContent = 'Photo uploaded. Select an emotion.';
-      };
-      reader.readAsDataURL(file);
-    } else {
-      statusMessage.textContent = 'Please select a valid image.';
+  // REPLACED FileReader logic with a fetch API call to the server.
+  photoInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file || !file.type.startsWith('image/')) {
+        photoInput.value = '';
+        return;
     }
-    photoInput.value = '';
+
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    try {
+      // Send the photo to the Flask server
+      const response = await fetch('/upload_photo', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Photo upload failed.');
+      }
+
+      const data = await response.json();
+      
+      // Use the filename and duration from the server's response
+      storyImage.src = `/uploads/${data.filename}`; // Load image from server
+      uploadContainer.style.display = 'none';
+      storyContainer.style.display = 'flex';
+
+      // Pass the server-controlled duration to the showStory function
+      showStory(data.story_duration_ms); 
+
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Could not upload the story. Please try again.");
+    } finally {
+        photoInput.value = ''; // Clear the input
+    }
   });
 
-  emotionSelect.addEventListener('change', () => {
-    const val = emotionSelect.value;
-    emotionDisplay.textContent = val ? `Feeling: ${val}` : '';
-  });
+  // MODIFIED showStory to accept the duration as a parameter.
+  function showStory(duration) {
+    // Insert emotion chips
+    emotionRow.innerHTML = '';
+    emotions.forEach(emotion => {
+      const chip = document.createElement('div');
+      chip.className = 'emotion-chip';
+      chip.textContent = emotion;
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('.emotion-chip').forEach(c => c.classList.remove('selected'));
+        chip.classList.add('selected');
+        showFeelingText(emotion);
+      });
+      emotionRow.appendChild(chip);
+    });
 
-  function startTimer() {
-    clearTimeout(countdownTimer);
-    countdownTimer = setTimeout(() => {
-      photoDisplay.style.display = 'none';
-      emotionSelect.disabled = true;
-      emotionSelect.value = '';
-      emotionDisplay.textContent = '';
-      statusMessage.textContent = 'Photo has disappeared.';
-    }, DISPLAY_DURATION_SECONDS * 1000);
+    // Animate progress bar using the duration from the server
+    progressFill.style.transition = 'none';
+    progressFill.style.width = '0%';
+    setTimeout(() => {
+      progressFill.style.transition = `width ${duration}ms linear`;
+      progressFill.style.width = '100%';
+    });
+
+    // Auto-hide story after the duration from the server
+    setTimeout(() => {
+      storyContainer.style.display = 'none';
+      uploadContainer.style.display = 'flex';
+    }, duration);
+  }
+
+  function showFeelingText(emotion) {
+    let feelingDiv = document.querySelector('.feeling-text');
+    if (!feelingDiv) {
+      feelingDiv = document.createElement('div');
+      feelingDiv.className = 'feeling-text';
+      storyContainer.appendChild(feelingDiv);
+    }
+    feelingDiv.textContent = `Feeling ${emotion.split(" ")[1] || emotion}`;
+    feelingDiv.classList.add('show');
+
+    // Hide after 2 seconds (this can be a fixed value)
+    setTimeout(() => {
+      feelingDiv.classList.remove('show');
+    }, 2000);
   }
 </script>
 </body>
