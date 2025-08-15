@@ -8,7 +8,7 @@ import uuid
 app = Flask(__name__, static_folder="static")
 CORS(app)  # Enable CORS for frontend access
 UPLOAD_FOLDER = "uploads"
-DISAPPEAR_TIME_SECONDS = 30  # Configurable photo disappearance time
+STORY_DURATION_MS = 50000  # 5 seconds
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 # Ensure upload directory exists
@@ -61,7 +61,7 @@ def upload_photo():
             return jsonify({
                 "status": "success",
                 "filename": filename,
-                "disappear_time": DISAPPEAR_TIME_SECONDS
+                "story_duration_ms": STORY_DURATION_MS # ✅ CORRECTED
             }), 200
         except Exception as e:
             return jsonify({"error": f"Failed to save photo: {str(e)}"}), 500
@@ -80,7 +80,7 @@ def serve_uploaded_file(filename):
 if __name__ == '__main__':
     print(f"Starting server...")
     print(f"Photos will be saved in: {UPLOAD_FOLDER}")
-    print(f"Photos will disappear after {DISAPPEAR_TIME_SECONDS} seconds")
+    print(f"Story duration is set to {STORY_DURATION_MS}ms") # ✅ CORRECTED
     print(f"Access login page at: http://localhost:5000")
     print(f"Access upload page directly at: http://localhost:5000/upload")
     app.run(host='0.0.0.0', port=5000, debug=True)
