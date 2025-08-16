@@ -76,6 +76,29 @@
     opacity: 1;
   }
 
+.scripture-text {
+  position: fixed; /* instead of absolute */
+  bottom: calc(var(--nav-height) + 100px); /* sits above bottom nav */
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 90%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 16px;
+  font-size: 1.1rem;
+  text-align: center;
+  line-height: 1.4;
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  z-index: 20; /* ensure it's above image */
+}
+
+  .scripture-text.show {
+    opacity: 1;
+  }
+
   /* Progress bar */
   .progress-bar {
     position: absolute;
@@ -164,9 +187,11 @@
 <div class="story-container" id="storyContainer">
   <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
   <img id="storyImage" class="story-image" alt="Story" />
-  <div class="emotion-row" id="emotionRow">
-    <!-- Emotions dynamically inserted -->
-  </div>
+  
+  <!-- 📖 Scripture overlay -->
+  <div class="scripture-text" id="scriptureText"></div>
+  
+  <div class="emotion-row" id="emotionRow"></div>
 </div>
 
 <!-- Bottom navigation -->
@@ -185,6 +210,7 @@
   const storyImage = document.getElementById('storyImage');
   const progressFill = document.getElementById('progressFill');
   const emotionRow = document.getElementById('emotionRow');
+  const scriptureText = document.getElementById('scriptureText');
 
   const emotions = [
     "🙏 Grateful", "😊 Joyful", "😌 Peaceful", "✨ Hopeful",
@@ -192,11 +218,8 @@
     "🤯 Overwhelmed", "😔 Reflective", "💭 Seeking", "😢 Mourning"
   ];
 
-  // REMOVED the hardcoded STORY_DURATION constant.
-
   uploadBtn.addEventListener('click', () => photoInput.click());
 
-  // REPLACED FileReader logic with a fetch API call to the server.
   photoInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file || !file.type.startsWith('image/')) {
@@ -208,7 +231,6 @@
     formData.append('photo', file);
 
     try {
-      // Send the photo to the Flask server
       const response = await fetch('/upload_photo', {
         method: 'POST',
         body: formData,
@@ -220,25 +242,25 @@
 
       const data = await response.json();
       
-      // Use the filename and duration from the server's response
-      storyImage.src = `/uploads/${data.filename}`; // Load image from server
+      storyImage.src = `/uploads/${data.filename}`;
       uploadContainer.style.display = 'none';
       storyContainer.style.display = 'flex';
 
-      // Pass the server-controlled duration to the showStory function
+      // ✅ Show scripture overlay
+      scriptureText.textContent = data.scripture || "✨ A verse will appear here...";
+      setTimeout(() => scriptureText.classList.add('show'), 500);
+
       showStory(data.story_duration_ms); 
 
     } catch (error) {
       console.error("Error:", error);
       alert("Could not upload the story. Please try again.");
     } finally {
-        photoInput.value = ''; // Clear the input
+        photoInput.value = ''; 
     }
   });
 
-  // MODIFIED showStory to accept the duration as a parameter.
   function showStory(duration) {
-    // Insert emotion chips
     emotionRow.innerHTML = '';
     emotions.forEach(emotion => {
       const chip = document.createElement('div');
@@ -252,7 +274,6 @@
       emotionRow.appendChild(chip);
     });
 
-    // Animate progress bar using the duration from the server
     progressFill.style.transition = 'none';
     progressFill.style.width = '0%';
     setTimeout(() => {
@@ -260,10 +281,10 @@
       progressFill.style.width = '100%';
     });
 
-    // Auto-hide story after the duration from the server
     setTimeout(() => {
       storyContainer.style.display = 'none';
       uploadContainer.style.display = 'flex';
+      scriptureText.classList.remove('show'); // reset verse fade
     }, duration);
   }
 
@@ -277,7 +298,6 @@
     feelingDiv.textContent = `Feeling ${emotion.split(" ")[1] || emotion}`;
     feelingDiv.classList.add('show');
 
-    // Hide after 2 seconds (this can be a fixed value)
     setTimeout(() => {
       feelingDiv.classList.remove('show');
     }, 2000);
