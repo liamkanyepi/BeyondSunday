@@ -44,7 +44,7 @@ def serve_upload():
 
 @app.route('/upload_photo', methods=['POST'])
 def upload_photo():
-    """Handle photo upload, save to directory, and return scripture"""
+    """Handle photo upload, save to directory, and return multiple scriptures"""
     if 'photo' not in request.files:
         return jsonify({"error": "No photo provided"}), 400
 
@@ -63,18 +63,18 @@ def upload_photo():
             # Save the photo locally
             file.save(file_path)
 
-            # Call Scripture AI model
-            scripture = Scripture_VLM(file_path)
+            # Call Scripture AI model (returns list of 5 verses)
+            scriptures = Scripture_VLM(file_path, num_verses=3)
 
             return jsonify({
                 "status": "success",
                 "filename": filename,
                 "story_duration_ms": STORY_DURATION_MS,
-                "scripture": scripture  
+                "scriptures": scriptures  # <-- return list for dropdown
             }), 200
 
         except Exception as e:
-            return jsonify({"error": f"Failed to save photo or generate scripture: {str(e)}"}), 500
+            return jsonify({"error": f"Failed to save photo or generate scriptures: {str(e)}"}), 500
 
     else:
         return jsonify({"error": "Invalid file format. Allowed formats: png, jpg, jpeg, gif"}), 400

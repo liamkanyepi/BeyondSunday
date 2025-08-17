@@ -17,7 +17,18 @@
     flex-direction: column;
   }
 
-  /* Centered upload button when idle */
+  /* Logo always visible top-left */
+  .logo {
+    position: fixed;
+    top: 8px;
+    left: 12px;
+    z-index: 50;
+  }
+  .logo img {
+    height: 40px;
+    object-fit: contain;
+  }
+
   .upload-container {
     flex: 1;
     display: flex;
@@ -39,7 +50,7 @@
 
   input[type="file"] { display: none; }
 
-  /* Story display area */
+  /* Story display */
   .story-container {
     position: relative;
     flex: 1;
@@ -50,53 +61,52 @@
 
   .story-image {
     flex: 1;
-    object-fit: contain; /* fit inside boundaries */
+    object-fit: contain;
     width: 100%;
     height: calc(100vh - var(--nav-height));
-    background-color: black; /* black borders if needed */
-    padding: 1px 20px; /* 5px for top/bottom, 20px for left/right */
-    box-sizing: border-box; 
+    background-color: black;
+    padding: 1px 20px;
+    box-sizing: border-box;
   }
 
-  /* Feeling text overlay */
-  .feeling-text {
-    position: absolute;
-    bottom: calc(var(--nav-height) + 80px);
+  /* Scripture overlay */
+  .scripture-text {
+    position: fixed;
+    bottom: calc(var(--nav-height) + 100px);
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0,0,0,0.6);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 1rem;
+    max-width: 90%;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    padding: 12px 18px;
+    border-radius: 16px;
+    font-size: 1.1rem;
+    text-align: center;
+    line-height: 1.4;
+    backdrop-filter: blur(4px);
     opacity: 0;
-    transition: opacity 0.5s ease;
+    transition: opacity 0.8s ease;
+    z-index: 20;
   }
-  .feeling-text.show {
-    opacity: 1;
+  .scripture-text.show { opacity: 1; }
+
+  /* Dropdown */
+  #scriptureDropdownContainer {
+    position: fixed;
+    top: 56px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20,20,20,0.85);
+    padding: 8px 12px;
+    border-radius: 12px;
+    z-index: 30;
+    display: block; /* always visible, updated later */
   }
-
-.scripture-text {
-  position: fixed; /* instead of absolute */
-  bottom: calc(var(--nav-height) + 100px); /* sits above bottom nav */
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: 90%;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  padding: 12px 18px;
-  border-radius: 16px;
-  font-size: 1.1rem;
-  text-align: center;
-  line-height: 1.4;
-  backdrop-filter: blur(4px);
-  opacity: 0;
-  transition: opacity 0.8s ease;
-  z-index: 20; /* ensure it's above image */
-}
-
-  .scripture-text.show {
-    opacity: 1;
+  #scriptureSelect {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: none;
+    font-size: 0.9rem;
   }
 
   /* Progress bar */
@@ -114,12 +124,11 @@
     transition: width linear;
   }
 
-  /* Emotion chip row */
+  /* Emotions row */
   .emotion-row {
     position: absolute;
     bottom: calc(var(--nav-height) + 16px);
-    left: 0;
-    right: 0;
+    left: 0; right: 0;
     display: flex;
     gap: 8px;
     overflow-x: auto;
@@ -177,24 +186,38 @@
 </head>
 <body>
 
-<!-- Upload Button (only visible before story) -->
+<!-- Logo -->
+<div class="logo">
+  <img src="static/Figures/logo.jpeg" alt="BeyondSunday Logo" />
+</div>
+
+<!-- Upload screen -->
 <div class="upload-container" id="uploadContainer">
   <input type="file" id="photoInput" accept="image/*" capture="environment" />
   <button id="uploadBtn">Take a Photo or Upload</button>
 </div>
 
-<!-- Story display -->
+<!-- Story screen -->
 <div class="story-container" id="storyContainer">
   <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
   <img id="storyImage" class="story-image" alt="Story" />
-  
-  <!-- 📖 Scripture overlay -->
+
+  <!-- Dropdown always there -->
+  <div id="scriptureDropdownContainer">
+    <label for="scriptureSelect" style="color:white;">Choose:</label>
+    <select id="scriptureSelect">
+      <option>Loading scriptures...</option>
+    </select>
+  </div>
+
+  <!-- Scripture overlay -->
   <div class="scripture-text" id="scriptureText"></div>
-  
+
+  <!-- Emotions -->
   <div class="emotion-row" id="emotionRow"></div>
 </div>
 
-<!-- Bottom navigation -->
+<!-- Bottom nav -->
 <nav class="bottom-nav">
   <div class="nav-item" id="homeTab">🏠</div>
   <div class="nav-item active" id="storyTabBtn">➕</div>
@@ -211,12 +234,9 @@
   const progressFill = document.getElementById('progressFill');
   const emotionRow = document.getElementById('emotionRow');
   const scriptureText = document.getElementById('scriptureText');
+  const scriptureSelect = document.getElementById('scriptureSelect');
 
-  const emotions = [
-    "🙏 Grateful", "😊 Joyful", "😌 Peaceful", "✨ Hopeful",
-    "❤️ Loved", "🔥 Passionate", "🌿 Forgiving", "💪 Empowered",
-    "🤯 Overwhelmed", "😔 Reflective", "💭 Seeking", "😢 Mourning"
-  ];
+  const emotions = ["🙏 Grateful","😊 Joyful","😌 Peaceful","✨ Hopeful","❤️ Loved","🔥 Passionate","🌿 Forgiving","💪 Empowered","🤯 Overwhelmed","😔 Reflective","💭 Seeking","😢 Mourning"];
 
   uploadBtn.addEventListener('click', () => photoInput.click());
 
@@ -231,32 +251,40 @@
     formData.append('photo', file);
 
     try {
-      const response = await fetch('/upload_photo', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Photo upload failed.');
-      }
-
+      const response = await fetch('/upload_photo', { method: 'POST', body: formData });
+      if (!response.ok) throw new Error('Upload failed.');
       const data = await response.json();
-      
+
       storyImage.src = `/uploads/${data.filename}`;
       uploadContainer.style.display = 'none';
       storyContainer.style.display = 'flex';
 
-      // ✅ Show scripture overlay
-      scriptureText.textContent = data.scripture || "✨ A verse will appear here...";
-      setTimeout(() => scriptureText.classList.add('show'), 500);
+      // Populate scriptures
+      scriptureSelect.innerHTML = '';
+      if (Array.isArray(data.scriptures) && data.scriptures.length > 0) {
+        data.scriptures.forEach((verse, idx) => {
+          const opt = document.createElement('option');
+          opt.value = verse;
+          opt.textContent = verse;
+          scriptureSelect.appendChild(opt);
+        });
+        scriptureText.textContent = data.scriptures[0];
+        setTimeout(() => scriptureText.classList.add('show'), 500);
 
-      showStory(data.story_duration_ms); 
+        scriptureSelect.addEventListener('change', e => {
+          scriptureText.textContent = e.target.value;
+        });
+      } else {
+        scriptureSelect.innerHTML = '<option>No scriptures available</option>';
+      }
 
-    } catch (error) {
-      console.error("Error:", error);
-      alert("Could not upload the story. Please try again.");
+      showStory(data.story_duration_ms);
+
+    } catch (err) {
+      console.error(err);
+      alert("Upload failed.");
     } finally {
-        photoInput.value = ''; 
+      photoInput.value = '';
     }
   });
 
@@ -269,7 +297,6 @@
       chip.addEventListener('click', () => {
         document.querySelectorAll('.emotion-chip').forEach(c => c.classList.remove('selected'));
         chip.classList.add('selected');
-        showFeelingText(emotion);
       });
       emotionRow.appendChild(chip);
     });
@@ -284,23 +311,8 @@
     setTimeout(() => {
       storyContainer.style.display = 'none';
       uploadContainer.style.display = 'flex';
-      scriptureText.classList.remove('show'); // reset verse fade
+      scriptureText.classList.remove('show');
     }, duration);
-  }
-
-  function showFeelingText(emotion) {
-    let feelingDiv = document.querySelector('.feeling-text');
-    if (!feelingDiv) {
-      feelingDiv = document.createElement('div');
-      feelingDiv.className = 'feeling-text';
-      storyContainer.appendChild(feelingDiv);
-    }
-    feelingDiv.textContent = `Feeling ${emotion.split(" ")[1] || emotion}`;
-    feelingDiv.classList.add('show');
-
-    setTimeout(() => {
-      feelingDiv.classList.remove('show');
-    }, 2000);
   }
 </script>
 </body>
