@@ -4,8 +4,9 @@ import os
 from datetime import datetime
 import uuid
 
-# Import AI Scripture function
+# Import AI Classes
 from scripture_suggestion.VLM_scripture import Scripture_VLM
+from scripture_suggestion.VLM_devotional import Devotional_VLM
 
 # Configuration
 app = Flask(__name__, static_folder="static")
@@ -19,6 +20,10 @@ if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Initialize AI models once
+vlm = Scripture_VLM()
+devotional_vlm = Devotional_VLM()
 
 
 def allowed_file(filename):
@@ -38,6 +43,12 @@ def serve_login():
 def serve_upload():
     """Serve the upload page after login"""
     return send_from_directory(app.static_folder, 'upload.html')
+
+
+@app.route('/devotional')
+def serve_devotional():
+    """Serve the devotional page"""
+    return send_from_directory(app.static_folder, 'devotional.html')
 
 
 # ---- API ROUTES ----
@@ -63,8 +74,8 @@ def upload_photo():
             # Save the photo locally
             file.save(file_path)
 
-            # Call Scripture AI model (returns list of 5 verses)
-            scriptures = Scripture_VLM(file_path, num_verses=3)
+            # Call Scripture AI model (returns list of verses or rejection message)
+            scriptures = vlm.generate_scripture(file_path, num_verses=3)
 
             return jsonify({
                 "status": "success",
@@ -78,6 +89,41 @@ def upload_photo():
 
     else:
         return jsonify({"error": "Invalid file format. Allowed formats: png, jpg, jpeg, gif"}), 400
+
+
+@app.route('/generate_devotional', methods=['POST'])
+def generate_devotional():
+    """Generate a devotional based on topic, feeling, and optional image"""
+    topic = request.form.get("topic")
+    feeling = request.form.get("feeling")
+
+    if not topic or not feeling:
+        return jsonify({"error": "Topic and feeling are required"}), 400
+
+    image_path = None
+    if "photo" in request.files and request.files["photo"].filename != "":
+        file = request.files["photo"]
+        if file and allowed_file(file.filename):
+            # Save optional photo
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            unique_id = str(uuid.uuid4())[:8]
+            filename = f"devotional_{timestamp}_{unique_id}.{file.filename.rsplit('.', 1)[1].lower()}"
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(image_path)
+        else:
+            return jsonify({"error": "Invalid file format for devotional image."}), 400
+
+    try:
+        # Generate devotional
+        devotional_text = devotional_vlm.generate_devotional(topic=topic, feeling=feeling, image_path=image_path)
+
+        return jsonify({
+            "status": "success",
+            "devotional": devotional_text
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Failed to generate devotional: {str(e)}"}), 500
 
 
 @app.route('/uploads/<filename>')
@@ -94,4 +140,5 @@ if __name__ == '__main__':
     print(f"Story duration is set to {STORY_DURATION_MS}ms")
     print(f"Access login page at: http://localhost:5000")
     print(f"Access upload page directly at: http://localhost:5000/upload")
+    print(f"Access devotional page at: http://localhost:5000/devotional")
     app.run(host='0.0.0.0', port=5000, debug=True)

@@ -17,18 +17,6 @@
     flex-direction: column;
   }
 
-  /* Logo always visible top-left */
-  .logo {
-    position: fixed;
-    top: 8px;
-    left: 12px;
-    z-index: 50;
-  }
-  .logo img {
-    height: 40px;
-    object-fit: contain;
-  }
-
   .upload-container {
     flex: 1;
     display: flex;
@@ -65,11 +53,10 @@
     width: 100%;
     height: calc(100vh - var(--nav-height));
     background-color: black;
-    padding: 1px 20px;
     box-sizing: border-box;
   }
 
-  /* Scripture overlay */
+  /* Scripture text overlay */
   .scripture-text {
     position: fixed;
     bottom: calc(var(--nav-height) + 100px);
@@ -90,23 +77,35 @@
   }
   .scripture-text.show { opacity: 1; }
 
-  /* Dropdown */
-  #scriptureDropdownContainer {
+  /* Scripture buttons */
+  #scriptureButtonsContainer {
     position: fixed;
     top: 56px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(20,20,20,0.85);
-    padding: 8px 12px;
-    border-radius: 12px;
+    display: flex;
+    gap: 8px;
+    max-width: 95%;
+    overflow-x: auto;
+    padding: 6px;
+    scrollbar-width: none;
     z-index: 30;
-    display: block; /* always visible, updated later */
   }
-  #scriptureSelect {
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: none;
+  #scriptureButtonsContainer::-webkit-scrollbar { display: none; }
+
+  .scripture-btn {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 6px 12px;
+    border-radius: 16px;
     font-size: 0.9rem;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .scripture-btn.active {
+    background: white;
+    color: black;
   }
 
   /* Progress bar */
@@ -182,13 +181,40 @@
     outline: 2px solid rgba(255,255,255,0.15);
     outline-offset: 2px;
   }
+
+  /* Loading overlay */
+  #loadingOverlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+    color: white;
+    font-size: 1.2rem;
+  }
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255,255,255,0.3);
+    border-top: 4px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 12px;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
 </style>
 </head>
 <body>
 
-<!-- Logo -->
-<div class="logo">
-  <img src="static/Figures/logo.jpeg" alt="BeyondSunday Logo" />
+<!-- Loading Overlay -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <p>Loading...</p>
 </div>
 
 <!-- Upload screen -->
@@ -202,13 +228,8 @@
   <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
   <img id="storyImage" class="story-image" alt="Story" />
 
-  <!-- Dropdown always there -->
-  <div id="scriptureDropdownContainer">
-    <label for="scriptureSelect" style="color:white;">Choose:</label>
-    <select id="scriptureSelect">
-      <option>Loading scriptures...</option>
-    </select>
-  </div>
+  <!-- Scripture chips -->
+  <div id="scriptureButtonsContainer"></div>
 
   <!-- Scripture overlay -->
   <div class="scripture-text" id="scriptureText"></div>
@@ -234,7 +255,8 @@
   const progressFill = document.getElementById('progressFill');
   const emotionRow = document.getElementById('emotionRow');
   const scriptureText = document.getElementById('scriptureText');
-  const scriptureSelect = document.getElementById('scriptureSelect');
+  const scriptureButtonsContainer = document.getElementById('scriptureButtonsContainer');
+  const loadingOverlay = document.getElementById('loadingOverlay');
 
   const emotions = ["🙏 Grateful","😊 Joyful","😌 Peaceful","✨ Hopeful","❤️ Loved","🔥 Passionate","🌿 Forgiving","💪 Empowered","🤯 Overwhelmed","😔 Reflective","💭 Seeking","😢 Mourning"];
 
@@ -247,6 +269,8 @@
         return;
     }
 
+    loadingOverlay.style.display = 'flex'; // show loader
+
     const formData = new FormData();
     formData.append('photo', file);
 
@@ -255,32 +279,37 @@
       if (!response.ok) throw new Error('Upload failed.');
       const data = await response.json();
 
+      storyImage.onload = () => {
+        loadingOverlay.style.display = 'none'; // hide loader once loaded
+      };
       storyImage.src = `/uploads/${data.filename}`;
       uploadContainer.style.display = 'none';
       storyContainer.style.display = 'flex';
 
-      // Populate scriptures
-      scriptureSelect.innerHTML = '';
+      // Populate scriptures as chips
+      scriptureButtonsContainer.innerHTML = '';
       if (Array.isArray(data.scriptures) && data.scriptures.length > 0) {
         data.scriptures.forEach((verse, idx) => {
-          const opt = document.createElement('option');
-          opt.value = verse;
-          opt.textContent = verse;
-          scriptureSelect.appendChild(opt);
+          const btn = document.createElement('div');
+          btn.className = 'scripture-btn' + (idx === 0 ? ' active' : '');
+          btn.textContent = verse;
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.scripture-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            scriptureText.textContent = verse;
+          });
+          scriptureButtonsContainer.appendChild(btn);
         });
         scriptureText.textContent = data.scriptures[0];
         setTimeout(() => scriptureText.classList.add('show'), 500);
-
-        scriptureSelect.addEventListener('change', e => {
-          scriptureText.textContent = e.target.value;
-        });
       } else {
-        scriptureSelect.innerHTML = '<option>No scriptures available</option>';
+        scriptureButtonsContainer.innerHTML = '<div class="scripture-btn">No scriptures available</div>';
       }
 
       showStory(data.story_duration_ms);
 
     } catch (err) {
+      loadingOverlay.style.display = 'none';
       console.error(err);
       alert("Upload failed.");
     } finally {
