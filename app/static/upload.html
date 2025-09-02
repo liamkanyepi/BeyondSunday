@@ -25,16 +25,20 @@
   }
 
   button {
-    background: linear-gradient(135deg, #ff5f6d, #ffc371);
-    border: none;
+    background: white;       
+    color: black;            
+    border: 1px solid #333;  
     padding: 14px 22px;
     border-radius: 8px;
     font-size: 1rem;
     font-weight: bold;
     cursor: pointer;
-    color: #000;
+    transition: background 0.2s, color 0.2s;
   }
-  button:hover { filter: brightness(1.1); }
+  button:hover {
+    background: black;       
+    color: white;
+  }
 
   input[type="file"] { display: none; }
 
@@ -182,6 +186,13 @@
     outline-offset: 2px;
   }
 
+  /* SVG cross icon */
+  .cross-icon {
+    width: 28px;
+    height: 28px;
+    display: block;
+  }
+
   /* Loading overlay */
   #loadingOverlay {
     position: fixed;
@@ -240,10 +251,17 @@
 
 <!-- Bottom nav -->
 <nav class="bottom-nav">
-  <div class="nav-item" id="homeTab">🏠</div>
-  <div class="nav-item active" id="storyTabBtn">➕</div>
+  <div class="nav-item" id="homeTab" onclick="window.location='http://localhost:5000/'">🏠</div>
+  <div class="nav-item" id="storyTabBtn">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="cross-icon">
+      <circle cx="50" cy="50" r="45" stroke="white" stroke-width="8" fill="none"/>
+      <line x1="50" y1="25" x2="50" y2="75" stroke="white" stroke-width="8" stroke-linecap="round"/>
+      <line x1="30" y1="50" x2="70" y2="50" stroke="white" stroke-width="8" stroke-linecap="round"/>
+    </svg>
+  </div>
   <div class="nav-item" id="discoverTab">🌍</div>
   <div class="nav-item" id="profileTab">👤</div>
+  <div class="nav-item" onclick="window.location='http://localhost:5000/devotional'">📖</div>
 </nav>
 
 <script>
