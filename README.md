@@ -35,8 +35,14 @@ source app_venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 ```
+### 3️⃣ Create the .env file
+Create a file named `.env` in the `app/scripture_suggestion/` directory and add your API key:
 
-### 3️⃣ Running the Application
+```env
+OPENROUTER_API_KEY="your_api_key_here"
+```
+
+### 4️⃣ Running the Application
 ```bash
 # Navigate to the app directory
 cd app
@@ -48,10 +54,10 @@ python app.py
 The application will be available at:
 - Login page: `http://localhost:5000`
 - Upload page: `http://localhost:5000/upload`
+- Devotional page: `http://localhost:5000/devotional`
 
 ### 📝 Important Notes
 - Make sure you have Python 3.7+ installed
 - The server runs in debug mode by default
 - Photos are stored in the `app/uploads` directory
-- Images will disappear after 30 seconds (configurable in app.py)
 - Supported image formats: PNG, JPG, JPEG, GIF
