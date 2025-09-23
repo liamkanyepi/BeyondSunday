@@ -1,5 +1,6 @@
 import base64
 import os
+import json
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -20,60 +21,96 @@ class Devotional_VLM:
         with open(image_path, "rb") as img_file:
             return base64.b64encode(img_file.read()).decode("utf-8")
 
-    def _filter_image(self, img_base64: str) -> bool:
+    def _filter_image(self, img_base64: str) -> tuple[str, str | None]:
         """
-        Uses the VLM to decide if the image is safe and relevant.
-        Returns True if allowed, False if sensitive/irrelevant.
+        Uses the VLM to classify the image.
+        Returns a tuple: (classification, reason).
         """
         try:
             completion = self.client.chat.completions.create(
                 model=self.model,
+                response_format={"type": "json_object"},
                 messages=[
                     {
                         "role": "system",
                         "content": (
-                            "You are an assistant that filters images for devotional generation. "
-                            "Return only 'True' or 'False':\n"
-                            "- True if the image is safe, wholesome, and relevant to daily life, "
-                            "Christianity, or religion.\n"
-                            "- False if the image is sensitive (nudity, gore, violence, political, hateful) "
-                            "or irrelevant to daily life/Christian beliefs."
+                            "You are an AI assistant that classifies images for a Christian devotional generator. "
+                            "Analyze the image and respond with a JSON object containing two keys: 'classification' and 'reason'.\n"
+                            "The 'classification' value must be one of three strings: 'relevant', 'irrelevant', or 'unsuitable'.\n"
+                            "- 'relevant': The image is safe, wholesome, and can be connected to daily life, faith, or Christian themes. The 'reason' must be null.\n"
+                            "- 'irrelevant': The image is safe but has no clear connection to the intended themes (e.g., a software screenshot, a complex diagram, a meme). The 'reason' must be a brief, neutral explanation.\n"
+                            "- 'unsuitable': The image contains sensitive content (nudity, gore, violence, hate symbols, political extremism). The 'reason' must be null.\n"
+                            "Respond ONLY with the JSON object."
                         )
                     },
                     {
                         "role": "user",
                         "content": [
-                            {
-                                "type": "text",
-                                "text": "Should this image be allowed for devotional generation? Respond with only True or False."
-                            },
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": f"data:image/jpeg;base64,{img_base64}"}
-                            }
+                            {"type": "text", "text": "Classify this image and provide your response in a JSON object."},
+                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_base64}"}}
                         ]
                     }
                 ],
                 temperature=0.0
             )
-            response = completion.choices[0].message.content.strip().lower()
-            return response == "true"
+            response_text = completion.choices[0].message.content.strip()
+            
+            data = json.loads(response_text)
+            classification = data.get("classification")
+            reason = data.get("reason")
+
+            if classification in ['relevant', 'irrelevant', 'unsuitable']:
+                return classification, reason
+            else:
+                return 'unsuitable', "Invalid classification returned by model."
+
+        except json.JSONDecodeError:
+            print(f"Error decoding JSON from filter response: {response_text}")
+            return 'unsuitable', "Failed to parse filter response."
         except Exception as e:
             print(f"Error filtering image: {str(e)}")
-            return False
+            return 'unsuitable', str(e)
 
-    def generate_devotional(self, topic: str, feeling: str, image_path: str = None) -> str:
+    def generate_devotional(self, topic: str, feeling: str, image_path: str = None, force_generation: bool = False) -> dict:
         """
-        Generates a devotional message based on the topic, feeling, and optional image.
-        Structure: Opening verse, reflection, closing prayer.
+        Generates a devotional, handling image classification with a confirmation step.
+        
+        Returns a dictionary indicating the result:
+        - {"status": "success", "content": "devotional text..."}
+        - {"status": "needs_confirmation", "reason": "Reason text..."}
+        - {"status": "rejected", "content": "Rejection message..."}
+        - {"status": "error", "content": "Error message..."}
         """
         try:
             img_base64 = None
+            # --- Image Processing and Classification ---
             if image_path:
+                if not os.path.exists(image_path):
+                    return {"status": "error", "content": f"Image file not found at {image_path}"}
+                
                 img_base64 = self._encode_image(image_path)
-                if not self._filter_image(img_base64):
-                    return "Image rejected: Not suitable for devotional generation."
+                classification, reason = self._filter_image(img_base64)
 
+                # Case 1: Unsuitable images are always rejected.
+                if classification == 'unsuitable':
+                    return {
+                        "status": "rejected",
+                        "content": "Image rejected: The content is unsuitable for devotional generation."
+                    }
+                
+                # Case 2: Irrelevant images require user confirmation on the first pass.
+                if classification == 'irrelevant' and not force_generation:
+                    return {
+                        "status": "needs_confirmation",
+                        "reason": f"Image might be irrelevant. Reason: {reason}"
+                    }
+            
+            # --- Devotional Generation ---
+            # This section is reached if:
+            # 1. No image was provided.
+            # 2. The image was 'relevant'.
+            # 3. The image was 'irrelevant' but generation was forced.
+            
             messages = [
                 {
                     "role": "system",
@@ -103,9 +140,9 @@ class Devotional_VLM:
                 messages=messages,
                 temperature=0.9
             )
-
             devotional = completion.choices[0].message.content.strip()
-            return devotional
+            
+            return {"status": "success", "content": devotional}
 
         except Exception as e:
-            return f"Error generating devotional: {str(e)}"
+            return {"status": "error", "content": f"An unexpected error occurred: {str(e)}"}

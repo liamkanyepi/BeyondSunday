@@ -5,6 +5,7 @@ from datetime import datetime
 import uuid
 
 # Import AI Classes
+# NOTE: Make sure the VLM_devotional file is the updated version from the previous step
 from scripture_suggestion.VLM_scripture import Scripture_VLM
 from scripture_suggestion.VLM_devotional import Devotional_VLM
 
@@ -91,39 +92,48 @@ def upload_photo():
         return jsonify({"error": "Invalid file format. Allowed formats: png, jpg, jpeg, gif"}), 400
 
 
+# --- THIS IS THE MODIFIED SECTION ---
 @app.route('/generate_devotional', methods=['POST'])
 def generate_devotional():
     """Generate a devotional based on topic, feeling, and optional image"""
-    topic = request.form.get("topic")
-    feeling = request.form.get("feeling")
-
-    if not topic or not feeling:
-        return jsonify({"error": "Topic and feeling are required"}), 400
-
-    image_path = None
-    if "photo" in request.files and request.files["photo"].filename != "":
-        file = request.files["photo"]
-        if file and allowed_file(file.filename):
-            # Save optional photo
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            unique_id = str(uuid.uuid4())[:8]
-            filename = f"devotional_{timestamp}_{unique_id}.{file.filename.rsplit('.', 1)[1].lower()}"
-            image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(image_path)
-        else:
-            return jsonify({"error": "Invalid file format for devotional image."}), 400
-
     try:
-        # Generate devotional
-        devotional_text = devotional_vlm.generate_devotional(topic=topic, feeling=feeling, image_path=image_path)
+        topic = request.form.get("topic")
+        feeling = request.form.get("feeling")
+        # 1. Get the 'force_generation' flag from the form data.
+        # It defaults to False if not present (for the first request).
+        force_generation = request.form.get('force_generation') == 'true'
 
-        return jsonify({
-            "status": "success",
-            "devotional": devotional_text
-        }), 200
+        if not topic or not feeling:
+            return jsonify({"status": "error", "content": "Topic and feeling are required"}), 400
+
+        image_path = None
+        if "photo" in request.files and request.files["photo"].filename != "":
+            file = request.files["photo"]
+            if file and allowed_file(file.filename):
+                # Save optional photo
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                unique_id = str(uuid.uuid4())[:8]
+                filename = f"devotional_{timestamp}_{unique_id}.{file.filename.rsplit('.', 1)[1].lower()}"
+                image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(image_path)
+            else:
+                return jsonify({"status": "error", "content": "Invalid file format for devotional image."}), 400
+
+        # 2. Call the devotional VLM, passing the force_generation flag.
+        response_data = devotional_vlm.generate_devotional(
+            topic=topic,
+            feeling=feeling,
+            image_path=image_path,
+            force_generation=force_generation
+        )
+
+        # 3. Return the dictionary from the VLM class directly.
+        # The front-end is already set up to handle this structure.
+        return jsonify(response_data), 200
 
     except Exception as e:
-        return jsonify({"error": f"Failed to generate devotional: {str(e)}"}), 500
+        # Return errors in the same status/content format for consistency.
+        return jsonify({"status": "error", "content": f"An unexpected server error occurred: {str(e)}"}), 500
 
 
 @app.route('/uploads/<filename>')

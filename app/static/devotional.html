@@ -40,20 +40,24 @@
     background: rgba(255,255,255,0.1);
     color: #fff;
   }
+  
+  select option {
+    color: #000;
+  }
 
   button {
-    background: #fff;          /* white button */
+    background: #fff;
     border: none;
     padding: 14px 22px;
     border-radius: 8px;
     font-size: 1rem;
     font-weight: bold;
     cursor: pointer;
-    color: #000;              /* black text */
+    color: #000;
     transition: background 0.2s ease, transform 0.15s ease;
   }
   button:hover { 
-    background: #f0f0f0;       /* subtle grey hover */
+    background: #f0f0f0;
     transform: translateY(-2px);
   }
 
@@ -68,6 +72,13 @@
     color: #fff;
   }
   label.file-label:hover { background: rgba(255,255,255,0.2); }
+  
+  #fileName {
+    font-size: 0.85rem;
+    color: #aaa;
+    margin-top: -8px; 
+    min-height: 1.2em; 
+  }
 
   #devotionalResult {
     margin-top: 20px;
@@ -80,6 +91,29 @@
     text-align: left;
     display: none;
     white-space: pre-line;
+  }
+  
+  /* ADDED: Styles for the 'Save Devotional' button container */
+  .result-actions {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: right;
+  }
+
+  /* ADDED: Style for the button itself */
+  .result-actions button {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      font-weight: normal;
+      font-size: 0.9rem;
+      padding: 8px 16px;
+  }
+
+  .result-actions button:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: none;
   }
 
   #devotionalResult::-webkit-scrollbar { width: 6px; }
@@ -112,10 +146,6 @@
     font-size: 28px;
     user-select: none;
   }
-  .nav-item.active {
-    outline: 2px solid rgba(255,255,255,0.15);
-    outline-offset: 2px;
-  }
 
   .cross-icon { width: 28px; height: 28px; display: block; }
 
@@ -145,7 +175,6 @@
 </head>
 <body>
 
-<!-- Loading Overlay -->
 <div id="loadingOverlay">
   <div class="spinner"></div>
   <p>Generating your devotional...</p>
@@ -154,7 +183,8 @@
 <div class="container">
   <h2>Generate a Personal Devotional</h2>
 
-  <input type="text" id="feelingInput" placeholder="How are you feeling today?" />
+  <input type="text" id="feelingInput" placeholder="Enter your emotion or situation in a few words" />
+
   <select id="topicInput">
     <option value="">Select a devotional topic...</option>
     <option value="faith">Faith</option>
@@ -167,8 +197,11 @@
 
   <input type="file" id="photoInput" accept="image/*" />
   <label for="photoInput" class="file-label">📷 Upload an optional photo</label>
+  <span id="fileName"></span>
 
   <button id="generateBtn">Generate Devotional</button>
+  
+  <img id="previewImage" src="" alt="Selected Photo" style="display: none; max-width: 90%; max-height: 300px; border-radius: 12px; margin-top: 20px;" />
 
   <div id="devotionalResult"></div>
 </div>
@@ -182,32 +215,62 @@
       <line x1="30" y1="50" x2="70" y2="50" stroke="white" stroke-width="8" stroke-linecap="round"/>
     </svg>
   </div>
-  <div class="nav-item" onclick="window.location='discover.html'">🌍</div>
-  <div class="nav-item" onclick="window.location='profile.html'">👤</div>
+  <div class="nav-item">🌍</div>
+  <div class="nav-item">👤</div>
   <div class="nav-item" onclick="window.location='http://localhost:5000/devotional'">📖</div>
 </nav>
 
 <script>
+  // --- Element Selectors ---
   const generateBtn = document.getElementById('generateBtn');
   const loadingOverlay = document.getElementById('loadingOverlay');
   const resultBox = document.getElementById('devotionalResult');
+  const photoInput = document.getElementById('photoInput');
+  const fileNameSpan = document.getElementById('fileName');
+  const previewImage = document.getElementById('previewImage');
 
-  generateBtn.addEventListener('click', async () => {
+  // --- Event Listener for File Input (Handles Image Preview) ---
+  photoInput.addEventListener('change', () => {
+    if (photoInput.files && photoInput.files[0]) {
+      const file = photoInput.files[0];
+      fileNameSpan.textContent = file.name;
+      previewImage.src = URL.createObjectURL(file);
+      previewImage.style.display = 'block';
+    } else {
+      fileNameSpan.textContent = '';
+      previewImage.src = '';
+      previewImage.style.display = 'none';
+    }
+  });
+
+  // --- Main Click Handler ---
+  generateBtn.addEventListener('click', () => {
     const feeling = document.getElementById('feelingInput').value;
     const topic = document.getElementById('topicInput').value;
-    const photoFile = document.getElementById('photoInput').files[0];
+    const photoFile = photoInput.files[0];
 
     if (!feeling || !topic) {
       alert("Please enter your feeling and select a topic.");
       return;
     }
+    
+    if (!photoFile) {
+        previewImage.style.display = 'none';
+    }
 
     const formData = new FormData();
     formData.append('feeling', feeling);
     formData.append('topic', topic);
-    if (photoFile) formData.append('photo', photoFile);
+    if (photoFile) {
+      formData.append('photo', photoFile);
+    }
+    generateDevotional(formData);
+  });
 
+  // --- API Call and Response Handling Function ---
+  async function generateDevotional(formData) {
     loadingOverlay.style.display = 'flex';
+    resultBox.style.display = 'none';
 
     try {
       const response = await fetch('/generate_devotional', {
@@ -216,19 +279,53 @@
       });
       const data = await response.json();
 
-      if (data.error) {
-        alert(data.error);
-      } else {
-        resultBox.textContent = data.devotional;
-        resultBox.style.display = 'block';
+      switch (data.status) {
+        case 'success':
+          // CHANGED: Use innerHTML to add the devotional text and the save button.
+          const devotionalText = document.createElement('div');
+          devotionalText.textContent = data.content;
+
+          const saveButtonHTML = `
+            <div class="result-actions">
+                <button title="This feature is not yet active.">❤️ Save Devotional</button>
+            </div>
+          `;
+          
+          resultBox.innerHTML = ''; // Clear previous results
+          resultBox.appendChild(devotionalText);
+          resultBox.innerHTML += saveButtonHTML; // Append the button HTML
+          
+          resultBox.style.display = 'block';
+          loadingOverlay.style.display = 'none';
+          break;
+        
+        case 'rejected':
+        case 'error':
+          alert(data.content); 
+          loadingOverlay.style.display = 'none';
+          break;
+
+        case 'needs_confirmation':
+          loadingOverlay.style.display = 'none';
+          
+          const userConfirmed = confirm(data.reason + "\n\nDo you want to generate the devotional anyway?");
+          
+          if (userConfirmed) {
+            formData.append('force_generation', 'true');
+            generateDevotional(formData); 
+          }
+          break;
+
+        default:
+          alert("An unknown response was received from the server.");
+          loadingOverlay.style.display = 'none';
       }
     } catch (err) {
-      console.error(err);
-      alert("Failed to generate devotional.");
-    } finally {
+      console.error("Fetch Error:", err);
+      alert("An error occurred while communicating with the server.");
       loadingOverlay.style.display = 'none';
     }
-  });
+  }
 </script>
 
 </body>
