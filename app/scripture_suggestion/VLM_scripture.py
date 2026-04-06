@@ -13,7 +13,9 @@ class Scripture_VLM:
             base_url="https://openrouter.ai/api/v1",
             api_key=os.getenv("OPENROUTER_API_KEY"),
         )
-        self.model = "qwen/qwen2.5-vl-32b-instruct:free"
+        
+        self.model = "allenai/molmo-2-8b:free"
+        #"qwen/qwen2.5-vl-32b-instruct:free"
 
     def _encode_image(self, image_path: str) -> str:
         """Helper function to convert local image file to Base64 string."""

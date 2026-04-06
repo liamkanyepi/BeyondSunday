@@ -14,7 +14,14 @@ class Devotional_VLM:
             base_url="https://openrouter.ai/api/v1",
             api_key=os.getenv("OPENROUTER_API_KEY"),
         )
-        self.model = "qwen/qwen2.5-vl-32b-instruct:free"
+        #changing model name below can solve issue of devotional no longer being generated 
+        self.model = "mistralai/mistral-small-3.1-24b-instruct:free"
+
+
+        #x AS self.model, y AS API key
+        # This API key and model called 'hunter-alpha' model worked for sometime for both text and images -> if stops working, could either have run out
+        #of credit for the model or model has expired
+        
 
     def _encode_image(self, image_path: str) -> str:
         """Helper function to convert local image file to Base64 string."""
@@ -29,6 +36,7 @@ class Devotional_VLM:
         try:
             completion = self.client.chat.completions.create(
                 model=self.model,
+                max_tokens=500, 
                 response_format={"type": "json_object"},
                 messages=[
                     {
@@ -54,6 +62,10 @@ class Devotional_VLM:
                 temperature=0.0
             )
             response_text = completion.choices[0].message.content.strip()
+            ###
+            #print("Filter raw response:", response_text)
+
+
             
             data = json.loads(response_text)
             classification = data.get("classification")
@@ -92,11 +104,17 @@ class Devotional_VLM:
                 classification, reason = self._filter_image(img_base64)
 
                 # Case 1: Unsuitable images are always rejected.
-                if classification == 'unsuitable':
+                #if classification == 'unsuitable':
+                   # return {
+                       # "status": "rejected",
+                        #"content": "Image rejected: The content is unsuitable for devotional generation."
+                   # }
+                if classification == 'unsuitable' and not force_generation:
                     return {
-                        "status": "rejected",
-                        "content": "Image rejected: The content is unsuitable for devotional generation."
+                        "status": "needs_confirmation",
+                        "reason": "Image was flagged as potentially sensitive. Would you like to proceed?"
                     }
+
                 
                 # Case 2: Irrelevant images require user confirmation on the first pass.
                 if classification == 'irrelevant' and not force_generation:
@@ -138,7 +156,9 @@ class Devotional_VLM:
             completion = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
-                temperature=0.9
+                temperature=0.9,
+                #
+                max_tokens=1200
             )
             devotional = completion.choices[0].message.content.strip()
             
