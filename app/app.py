@@ -6,8 +6,10 @@ import uuid
 
 # Import AI Classes
 # NOTE: Make sure the VLM_devotional file is the updated version from the previous step
-from scripture_suggestion.VLM_scripture import Scripture_VLM
-from scripture_suggestion.VLM_devotional import Devotional_VLM
+#from scripture_suggestion.VLM_scripture import Scripture_VLM
+#from scripture_suggestion.VLM_devotional import Devotional_VLM
+from app.scripture_suggestion.VLM_scripture import Scripture_VLM
+from app.scripture_suggestion.VLM_devotional import Devotional_VLM
 
 # Configuration
 app = Flask(__name__, static_folder="static")
