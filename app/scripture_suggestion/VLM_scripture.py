@@ -4,7 +4,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+#load_dotenv()
 
 class Scripture_VLM:
     def __init__(self):

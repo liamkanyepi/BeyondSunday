@@ -3,6 +3,15 @@ from flask_cors import CORS
 import os
 from datetime import datetime
 import uuid
+from dotenv import load_dotenv
+import os
+
+env_path = os.path.join(os.path.dirname(__file__), "scripture_suggestion/.env")
+load_dotenv(env_path)
+
+print("ENV PATH:", env_path)
+print("LOADED KEY:", os.getenv("OPENROUTER_API_KEY"))
+
 
 # Import AI Classes
 # NOTE: Make sure the VLM_devotional file is the updated version from the previous step
@@ -153,5 +162,5 @@ if __name__ == '__main__':
     print(f"Access login page at: http://localhost:8000")
     print(f"Access upload page directly at: http://localhost:8000/upload")
     print(f"Access devotional page at: http://localhost:8000/devotional")
-    #app.run(host='0.0.0.0', port=8000, debug=True)
+    app.run(host='0.0.0.0', port=8000, debug=True)
     #app.run(host='0.0.0.0', port=8000)
