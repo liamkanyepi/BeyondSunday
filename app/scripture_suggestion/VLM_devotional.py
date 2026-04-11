@@ -5,7 +5,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 # Load environment variables
-#load_dotenv()
+load_dotenv()
 
 class Devotional_VLM:
     def __init__(self):
@@ -15,7 +15,7 @@ class Devotional_VLM:
             api_key=os.getenv("OPENROUTER_API_KEY"),
         )
         #changing model name below can solve issue of devotional no longer being generated 
-        self.model = "qwen/qwen3.6-plus:free"
+        self.model = "google/gemma-4-26b-a4b-it:free"
 
 
         #x AS self.model, y AS API key

@@ -3,5 +3,5 @@ app_venv/
 app/scripture_suggestion/__pycache__/
 app/scripture_suggestion/.env
 ####
-#.env
+.env
 uploads/
