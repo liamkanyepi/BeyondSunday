@@ -15,8 +15,8 @@ class Devotional_VLM:
             api_key=os.getenv("OPENROUTER_API_KEY"),
         )
         #changing model name below can solve issue of devotional no longer being generated 
-        self.model = "google/gemma-4-31b-it:free"
-
+        self.model = "google/gemini-3.1-flash-image-preview"
+        #google/gemma-4-26b-a4b-it:free
 
         #x AS self.model, y AS API key
         # This API key and model called 'hunter-alpha' model worked for sometime for both text and images -> if stops working, could either have run out
